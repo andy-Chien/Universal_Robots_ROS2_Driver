@@ -46,6 +46,7 @@ def launch_setup(context, *args, **kwargs):
     # Initialize Arguments
     ur_type = LaunchConfiguration("ur_type")
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
+    use_fake_controller = LaunchConfiguration("use_fake_controller")
     safety_limits = LaunchConfiguration("safety_limits")
     safety_pos_margin = LaunchConfiguration("safety_pos_margin")
     safety_k_position = LaunchConfiguration("safety_k_position")
@@ -116,6 +117,9 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "prefix:=",
             prefix,
+            " ",
+            "use_fake_hardware:=",
+            use_fake_hardware,
             " ",
         ]
     )
@@ -248,7 +252,68 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
     )
 
-    nodes_to_start = [move_group_node, rviz_node, servo_node]
+    # Static TF
+    static_tf = Node(
+        package="tf2_ros",
+        condition=IfCondition(use_fake_controller),
+        executable="static_transform_publisher",
+        name="static_transform_publisher",
+        output="log",
+        arguments=["0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "world", "base_link"],
+    )
+
+    # Publish TF
+    robot_state_publisher = Node(
+        package="robot_state_publisher",
+        condition=IfCondition(use_fake_controller),
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="both",
+        parameters=[robot_description],
+    )
+
+    # ros2_control using FakeSystem as hardware
+    ros2_controllers_path = PathJoinSubstitution(
+        [FindPackageShare("ur_bringup"), "config", "ur_controllers.yaml"]
+    )
+    ros2_control_node = Node(
+        package="controller_manager",
+        condition=IfCondition(use_fake_controller),
+        executable="ros2_control_node",
+        parameters=[robot_description, ros2_controllers_path],
+        output="both",
+    )
+
+    joint_state_broadcaster_spawner = Node(
+        package="controller_manager",
+        condition=IfCondition(use_fake_controller),
+        executable="spawner",
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager-timeout",
+            "300",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
+
+    arm_controller_spawner = Node(
+        package="controller_manager",
+        condition=IfCondition(use_fake_controller),
+        executable="spawner",
+        arguments=["joint_trajectory_controller", "-c", "/controller_manager"],
+    )
+
+    nodes_to_start = [
+        static_tf,
+        robot_state_publisher,
+        ros2_control_node,
+        joint_state_broadcaster_spawner,
+        arm_controller_spawner,
+        move_group_node, 
+        rviz_node, 
+        servo_node
+        ]
 
     return nodes_to_start
 
@@ -267,8 +332,15 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "use_fake_hardware",
-            default_value="false",
-            description="Indicate whether robot is running with fake hardware mirroring command to its states.",
+            default_value="true",
+            description="Indicate whether robot is running with fake hardware in simulator.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "use_fake_controller",
+            default_value="true",
+            description="Indicate whether robot is running with fake controller.",
         )
     )
     declared_arguments.append(
@@ -334,7 +406,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "use_sim_time",
             default_value="false",
-            description="Make MoveIt to use simulation time. This is needed for the trajectory planing in simulation.",
+            description="Make MoveIt to use simulation time. This is needed for \
+        the trajectory planing in simulation.",
         )
     )
     declared_arguments.append(
@@ -350,7 +423,7 @@ def generate_launch_description():
         DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
     )
     declared_arguments.append(
-        DeclareLaunchArgument("launch_servo", default_value="true", description="Launch Servo?")
+        DeclareLaunchArgument("launch_servo", default_value="false", description="Launch Servo?")
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
