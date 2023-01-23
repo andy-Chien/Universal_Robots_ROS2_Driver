@@ -44,6 +44,7 @@ from ur_moveit_config.launch_common import load_yaml
 def launch_setup(context, *args, **kwargs):
 
     # Initialize Arguments
+    ns = LaunchConfiguration("ns")
     ur_type = LaunchConfiguration("ur_type")
     use_fake_hardware = LaunchConfiguration("use_fake_hardware")
     use_fake_controller = LaunchConfiguration("use_fake_controller")
@@ -59,6 +60,7 @@ def launch_setup(context, *args, **kwargs):
     prefix = LaunchConfiguration("prefix")
     use_sim_time = LaunchConfiguration("use_sim_time")
     launch_rviz = LaunchConfiguration("launch_rviz")
+    rviz_config_file = LaunchConfiguration("rviz_config_file")
     launch_servo = LaunchConfiguration("launch_servo")
     pose_xyz = LaunchConfiguration("pose_xyz")
     pose_rpy = LaunchConfiguration("pose_rpy")
@@ -80,7 +82,7 @@ def launch_setup(context, *args, **kwargs):
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([FindPackageShare(description_package), "urdf", description_file]),
+            PathJoinSubstitution([FindPackageShare(moveit_config_package), "urdf", description_file]),
             " ",
             "robot_ip:=xxx.yyy.zzz.www",
             " ",
@@ -207,6 +209,7 @@ def launch_setup(context, *args, **kwargs):
 
     # Start the actual move_group node/action server
     move_group_node = Node(
+        namespace=ns,
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
@@ -225,16 +228,17 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # rviz with moveit configuration
-    rviz_config_file = PathJoinSubstitution(
-        [FindPackageShare(moveit_config_package), "rviz", "view_robot.rviz"]
+    rviz_config = PathJoinSubstitution(
+        [FindPackageShare(moveit_config_package), "rviz", rviz_config_file]
     )
     rviz_node = Node(
+        namespace=ns,
         package="rviz2",
         condition=IfCondition(launch_rviz),
         executable="rviz2",
         name="rviz2_moveit",
         output="log",
-        arguments=["-d", rviz_config_file],
+        arguments=["-d", rviz_config],
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -249,6 +253,7 @@ def launch_setup(context, *args, **kwargs):
     servo_yaml = load_yaml("ur_moveit_config", "config/ur_servo.yaml")
     servo_params = {"moveit_servo": servo_yaml}
     servo_node = Node(
+        namespace=ns,
         package="moveit_servo",
         condition=IfCondition(launch_servo),
         executable="servo_node_main",
@@ -261,23 +266,27 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Static TF
-    static_tf = Node(
-        package="tf2_ros",
-        condition=IfCondition(use_fake_controller),
-        executable="static_transform_publisher",
-        name="static_transform_publisher",
-        output="log",
-        arguments=["0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "world", "base_link"],
-    )
+    # static_tf = Node(
+    #     namespace=ns,
+    #     package="tf2_ros",
+    #     condition=IfCondition(use_fake_controller),
+    #     executable="static_transform_publisher",
+    #     name="static_transform_publisher",
+    #     output="log",
+    #     arguments=["0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "world", "base_link"],
+    # )
 
     # Publish TF
     robot_state_publisher = Node(
+        namespace=ns,
         package="robot_state_publisher",
         condition=IfCondition(use_fake_controller),
         executable="robot_state_publisher",
         name="robot_state_publisher",
         output="both",
-        parameters=[robot_description],
+        parameters=[
+            robot_description,
+        ],
     )
 
     # ros2_control using FakeSystem as hardware
@@ -285,14 +294,19 @@ def launch_setup(context, *args, **kwargs):
         [FindPackageShare("ur_bringup"), "config", "ur_controllers.yaml"]
     )
     ros2_control_node = Node(
+        namespace=ns,
         package="controller_manager",
         condition=IfCondition(use_fake_controller),
         executable="ros2_control_node",
-        parameters=[robot_description, ros2_controllers_path],
+        parameters=[
+            robot_description, 
+            ros2_controllers_path,
+        ],
         output="both",
     )
 
     joint_state_broadcaster_spawner = Node(
+        namespace=ns,
         package="controller_manager",
         condition=IfCondition(use_fake_controller),
         executable="spawner",
@@ -301,19 +315,20 @@ def launch_setup(context, *args, **kwargs):
             "--controller-manager-timeout",
             "300",
             "--controller-manager",
-            "/controller_manager",
+            "controller_manager",
         ],
     )
 
     arm_controller_spawner = Node(
+        namespace=ns,
         package="controller_manager",
         condition=IfCondition(use_fake_controller),
         executable="spawner",
-        arguments=["joint_trajectory_controller", "-c", "/controller_manager"],
+        arguments=["joint_trajectory_controller", "-c", "controller_manager"],
     )
 
     nodes_to_start = [
-        static_tf,
+        # static_tf,
         robot_state_publisher,
         ros2_control_node,
         joint_state_broadcaster_spawner,
@@ -321,7 +336,7 @@ def launch_setup(context, *args, **kwargs):
         move_group_node, 
         rviz_node, 
         servo_node
-        ]
+    ]
 
     return nodes_to_start
 
@@ -329,6 +344,13 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
 
     declared_arguments = []
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "ns",
+            default_value="",
+            description="name of namespace",
+        )
+    )
     # UR specific arguments
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -428,10 +450,25 @@ def generate_launch_description():
         )
     )
     declared_arguments.append(
-        DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
+        DeclareLaunchArgument(
+            "launch_rviz", 
+            default_value="true", 
+            description="Launch RViz?",
+        )
     )
     declared_arguments.append(
-        DeclareLaunchArgument("launch_servo", default_value="false", description="Launch Servo?")
+        DeclareLaunchArgument(
+            "rviz_config_file",
+            default_value="view_robot.rviz",
+            description="rviz description file.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "launch_servo", 
+            default_value="false", 
+            description="Launch Servo?",
+        )
     )
     declared_arguments.append(
         DeclareLaunchArgument(
