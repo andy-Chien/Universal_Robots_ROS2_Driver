@@ -60,6 +60,8 @@ def launch_setup(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration("use_sim_time")
     launch_rviz = LaunchConfiguration("launch_rviz")
     launch_servo = LaunchConfiguration("launch_servo")
+    pose_xyz = LaunchConfiguration("pose_xyz")
+    pose_rpy = LaunchConfiguration("pose_rpy")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -120,6 +122,12 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "use_fake_hardware:=",
             use_fake_hardware,
+            " ",
+            "pose_xyz:=",
+            pose_xyz,
+            " ",
+            "pose_rpy:=",
+            pose_rpy,
             " ",
         ]
     )
@@ -424,6 +432,20 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument("launch_servo", default_value="false", description="Launch Servo?")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "pose_xyz", 
+            default_value='"0 0 0"', 
+            description="position of robot in world",
+        )
+    )    
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "pose_rpy", 
+            default_value='"0 0 0"', 
+            description="orientation of robot in world",
+        )
     )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
