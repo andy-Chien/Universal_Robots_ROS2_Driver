@@ -30,6 +30,7 @@
 # Author: Denis Stogl
 
 import os
+import yaml
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -39,6 +40,7 @@ from launch.substitutions import Command, FindExecutable, LaunchConfiguration, P
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from ur_moveit_config.launch_common import load_yaml
+from ament_index_python.packages import get_package_share_directory
 
 
 def launch_setup(context, *args, **kwargs):
@@ -183,6 +185,13 @@ def launch_setup(context, *args, **kwargs):
         controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
         controllers_yaml["joint_trajectory_controller"]["default"] = True
 
+    prefix_text = prefix.perform(context)
+    if prefix_text != "":
+        controllers_yaml["scaled_joint_trajectory_controller"]["joints"] = \
+            [prefix_text + x for x in controllers_yaml["scaled_joint_trajectory_controller"]["joints"]]
+        controllers_yaml["joint_trajectory_controller"]["joints"] = \
+            [prefix_text + x for x in controllers_yaml["joint_trajectory_controller"]["joints"]]
+
     moveit_controllers = {
         "moveit_simple_controller_manager": controllers_yaml,
         "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager",
@@ -213,6 +222,7 @@ def launch_setup(context, *args, **kwargs):
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
+        prefix=['xterm -e gdb -ex run --args'],
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -293,6 +303,37 @@ def launch_setup(context, *args, **kwargs):
     ros2_controllers_path = PathJoinSubstitution(
         [FindPackageShare("ur_bringup"), "config", "ur_controllers.yaml"]
     )
+    ns_text = ns.perform(context)
+    ros2_controllers_path_text = ros2_controllers_path.perform(context)
+    if prefix_text != "":
+        ros2_controllers_yaml = load_yaml("ur_bringup", "config/ur_controllers.yaml")
+        jtc = 'joint_trajectory_controller'
+        rp = 'ros__parameters'
+        ros2_controllers_yaml[ns_text] = dict()
+        ros2_controllers_yaml[ns_text][jtc] = \
+            ros2_controllers_yaml[jtc]
+        ros2_controllers_yaml[ns_text]["scaled_" + jtc] = \
+            ros2_controllers_yaml["scaled_" + jtc]
+        ros2_controllers_yaml[ns_text][jtc][rp]["joints"] = \
+            [prefix_text + j for j in ros2_controllers_yaml[ns_text][jtc][rp]["joints"]]
+        ros2_controllers_yaml[ns_text]["scaled_" + jtc][rp]["joints"] = \
+            [prefix_text + j for j in ros2_controllers_yaml[ns_text]["scaled_" + jtc][rp]["joints"]]
+
+        ros2_controllers_yaml['/**'] = None
+        del ros2_controllers_yaml['/**']
+        del ros2_controllers_yaml[jtc]
+        del ros2_controllers_yaml["scaled_" + jtc]
+
+        with open(ros2_controllers_path_text, "r") as file_in:
+            file_in_text = file_in.read()
+            file_out = get_package_share_directory("ur_bringup") + \
+                "/config/" + prefix_text + "ur_controllers.yaml"
+            with open(file_out, "w") as file_out:
+                file_out.write(file_in_text + yaml.dump(ros2_controllers_yaml))
+        ros2_controllers_path = PathJoinSubstitution(
+            [FindPackageShare("ur_bringup"), "config", prefix_text + "ur_controllers.yaml"]
+        )
+
     ros2_control_node = Node(
         namespace=ns,
         package="controller_manager",
