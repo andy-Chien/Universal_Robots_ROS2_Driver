@@ -222,7 +222,7 @@ def launch_setup(context, *args, **kwargs):
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
-        prefix=['xterm -e gdb -ex run --args'],
+        # prefix=['xterm -e gdb -ex run --args'],
         parameters=[
             robot_description,
             robot_description_semantic,
