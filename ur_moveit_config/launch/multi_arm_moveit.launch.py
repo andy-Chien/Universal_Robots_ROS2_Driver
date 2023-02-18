@@ -27,6 +27,7 @@ def launch_setup(context, *args, **kwargs):
             "rviz_config_file": "robot_1.rviz",
             "pose_xyz": '"0 -0.5 0"',
             "pose_rpy": '"0 0 -1.5707963"',
+            "multi_arm": "true",
         }.items(),
         condition=IfCondition(launch_robot_1),
     )
@@ -42,6 +43,7 @@ def launch_setup(context, *args, **kwargs):
             "rviz_config_file": "robot_2.rviz",
             "pose_xyz": '"0 0.5 0"',
             "pose_rpy": '"0 0 1.5707963"',
+            "multi_arm": "true",
         }.items(),
         condition=IfCondition(launch_robot_2),
     )

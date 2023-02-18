@@ -66,6 +66,7 @@ def launch_setup(context, *args, **kwargs):
     launch_servo = LaunchConfiguration("launch_servo")
     pose_xyz = LaunchConfiguration("pose_xyz")
     pose_rpy = LaunchConfiguration("pose_rpy")
+    multi_arm = LaunchConfiguration("multi_arm")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -180,10 +181,20 @@ def launch_setup(context, *args, **kwargs):
     # Trajectory Execution Configuration
     controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
     # the scaled_joint_trajectory_controller does not work on fake hardware
-    change_controllers = context.perform_substitution(use_fake_hardware)
-    if change_controllers == "true":
+    use_fake_hardware_text = use_fake_hardware.perform(context)
+    multi_arm_text = multi_arm.perform(context)
+
+    joint_trajectory_controller_to_spawn = "scaled_joint_trajectory_controller"
+    if use_fake_hardware_text == "true" and multi_arm_text == "true":
+        controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
+        controllers_yaml["mr_joint_trajectory_controller"]["default"] = True
+        joint_trajectory_controller_to_spawn = "mr_joint_trajectory_controller"
+    elif use_fake_hardware_text == "true" and multi_arm_text == "false":
         controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
         controllers_yaml["joint_trajectory_controller"]["default"] = True
+        joint_trajectory_controller_to_spawn = "joint_trajectory_controller"
+    elif use_fake_hardware_text == "false" and multi_arm_text == "true":
+        pass
 
     prefix_text = prefix.perform(context)
     if prefix_text != "":
@@ -191,6 +202,8 @@ def launch_setup(context, *args, **kwargs):
             [prefix_text + x for x in controllers_yaml["scaled_joint_trajectory_controller"]["joints"]]
         controllers_yaml["joint_trajectory_controller"]["joints"] = \
             [prefix_text + x for x in controllers_yaml["joint_trajectory_controller"]["joints"]]
+        controllers_yaml["mr_joint_trajectory_controller"]["joints"] = \
+            [prefix_text + x for x in controllers_yaml["mr_joint_trajectory_controller"]["joints"]]
 
     moveit_controllers = {
         "moveit_simple_controller_manager": controllers_yaml,
@@ -314,15 +327,20 @@ def launch_setup(context, *args, **kwargs):
             ros2_controllers_yaml[jtc]
         ros2_controllers_yaml[ns_text]["scaled_" + jtc] = \
             ros2_controllers_yaml["scaled_" + jtc]
+        ros2_controllers_yaml[ns_text]["mr_" + jtc] = \
+            ros2_controllers_yaml["mr_" + jtc]
         ros2_controllers_yaml[ns_text][jtc][rp]["joints"] = \
             [prefix_text + j for j in ros2_controllers_yaml[ns_text][jtc][rp]["joints"]]
         ros2_controllers_yaml[ns_text]["scaled_" + jtc][rp]["joints"] = \
             [prefix_text + j for j in ros2_controllers_yaml[ns_text]["scaled_" + jtc][rp]["joints"]]
+        ros2_controllers_yaml[ns_text]["mr_" + jtc][rp]["joints"] = \
+            [prefix_text + j for j in ros2_controllers_yaml[ns_text]["mr_" + jtc][rp]["joints"]]
 
         ros2_controllers_yaml['/**'] = None
         del ros2_controllers_yaml['/**']
         del ros2_controllers_yaml[jtc]
         del ros2_controllers_yaml["scaled_" + jtc]
+        del ros2_controllers_yaml["mr_" + jtc]
 
         with open(ros2_controllers_path_text, "r") as file_in:
             file_in_text = file_in.read()
@@ -365,7 +383,7 @@ def launch_setup(context, *args, **kwargs):
         package="controller_manager",
         condition=IfCondition(use_fake_controller),
         executable="spawner",
-        arguments=["joint_trajectory_controller", "-c", "controller_manager"],
+        arguments=[joint_trajectory_controller_to_spawn, "-c", "controller_manager"],
     )
 
     nodes_to_start = [
@@ -405,6 +423,13 @@ def generate_launch_description():
             "use_fake_hardware",
             default_value="true",
             description="Indicate whether robot is running with fake hardware in simulator.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "multi_arm",
+            default_value="false",
+            description="Indicate running with multi robot or not.",
         )
     )
     declared_arguments.append(
