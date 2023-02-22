@@ -69,7 +69,7 @@ def launch_setup(context, *args, **kwargs):
     multi_arm = LaunchConfiguration("multi_arm")
 
     joint_limit_params = PathJoinSubstitution(
-        [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
+        [FindPackageShare(moveit_config_package), "config", ur_type.perform(context) + "_joint_limits.yaml"]
     )
     kinematics_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "default_kinematics.yaml"]
@@ -509,7 +509,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "prefix",
-            default_value='""',
+            default_value="",
             description="Prefix of the joint names, useful for \
         multi-robot setup. If changed than also joint names in the controllers' configuration \
         have to be updated.",
