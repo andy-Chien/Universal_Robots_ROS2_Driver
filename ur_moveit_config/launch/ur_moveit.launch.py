@@ -167,12 +167,36 @@ def launch_setup(context, *args, **kwargs):
     # "robot_description_planning": load_yaml_abs(str(joint_limit_params.perform(context)))
     # }
 
+    capabilities_to_disable = "move_group/MoveGroupCartesianPathService "
+    capabilities_to_disable += "move_group/MoveGroupPlanService "
+    # capabilities_to_disable += "move_group/MoveGroupQueryPlannersService "
+    capabilities_to_disable += "move_group/MoveGroupStateValidationService "
+    # capabilities_to_disable += "move_group/MoveGroupGetPlanningSceneService "
+    # capabilities_to_disable += "move_group/ApplyPlanningSceneService "
+    capabilities_to_disable += "move_group/ClearOctomapService "
+    capabilities_to_disable += "move_group/MoveGroupExecuteTrajectoryAction"
+
+    capabilities_to_enable = "moveit_capability/MoveGroupAsyncExecuteTrajectoryAction"
+
+    move_group_acapabilities_setting = {
+        "disable_capabilities": capabilities_to_disable,
+        "capabilities": capabilities_to_enable
+    }
+
+    planning_adapters = "planning_adapter/AddTrajectoryObstacles "
+    planning_adapters += "default_planner_request_adapters/AddTimeOptimalParameterization "
+    planning_adapters += "default_planner_request_adapters/FixWorkspaceBounds "
+    planning_adapters += "default_planner_request_adapters/FixStartStateBounds "
+    planning_adapters += "default_planner_request_adapters/FixStartStateCollision "
+    planning_adapters += "default_planner_request_adapters/FixStartStatePathConstraints"
+
     # Planning Configuration
     ompl_planning_pipeline_config = {
         "move_group": {
             "planning_plugin": "ompl_interface/OMPLPlannerC",
-            "request_adapters": """planning_adapter/AddTrajectoryObstacles default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
+            "request_adapters": planning_adapters,
             "start_state_max_bounds_error": 0.1,
+            "extra_robot_padding": 0.015,
         }
     }
     ompl_planning_yaml = load_yaml("ur_moveit_config", "config/ompl_planning.yaml")
@@ -245,6 +269,7 @@ def launch_setup(context, *args, **kwargs):
             trajectory_execution,
             moveit_controllers,
             planning_scene_monitor_parameters,
+            move_group_acapabilities_setting,
             {"use_sim_time": use_sim_time},
             warehouse_ros_config,
         ],

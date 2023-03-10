@@ -63,7 +63,8 @@ planner_configs:
     max_cost: 2
     store_planner_data: false
     load_planner_data: false
-    enable_exploration: false
+    enable_exploration: true
+    multi_query_planning_enabled: true
 
 ur_manipulator:
   planner_configs:
