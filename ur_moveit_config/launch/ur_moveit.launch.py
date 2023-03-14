@@ -199,8 +199,11 @@ def launch_setup(context, *args, **kwargs):
             "extra_robot_padding": 0.015,
         }
     }
+    prefix_text = prefix.perform(context)
     ompl_planning_yaml = load_yaml("ur_moveit_config", "config/ompl_planning.yaml")
     ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["move_group"]["planner_configs"]["AdaptPRMkDefault"] \
+        ["planner_data_path"] += prefix_text + 'adapt_prm.graph'
 
     # Trajectory Execution Configuration
     controllers_yaml = load_yaml("ur_moveit_config", "config/controllers.yaml")
@@ -220,7 +223,6 @@ def launch_setup(context, *args, **kwargs):
     elif use_fake_hardware_text == "false" and multi_arm_text == "true":
         pass
 
-    prefix_text = prefix.perform(context)
     if prefix_text != "":
         controllers_yaml["scaled_joint_trajectory_controller"]["joints"] = \
             [prefix_text + x for x in controllers_yaml["scaled_joint_trajectory_controller"]["joints"]]
