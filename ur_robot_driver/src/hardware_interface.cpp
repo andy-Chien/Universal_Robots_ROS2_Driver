@@ -304,7 +304,7 @@ URPositionHardwareInterface::on_activate(const rclcpp_lifecycle::State& previous
   }
   // Port that will be opened to send trajectory points from the driver to the robot. Note: this feature hasn't been
   // implemented in ROS2
-  int trajectory_port = 50003;
+  int trajectory_port = stoi(info_.hardware_parameters["trajectory_port"]);
   // Port that will be opened to forward script commands from the driver to the robot
   int script_command_port = stoi(info_.hardware_parameters["script_command_port"]);
   //  std::string tf_prefix = info_.hardware_parameters["tf_prefix"];
