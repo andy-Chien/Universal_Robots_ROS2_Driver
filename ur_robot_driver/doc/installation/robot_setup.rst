@@ -71,6 +71,8 @@ inside a colcon workspace).
 Extract calibration information
 -------------------------------
 
+.. _calibration_extraction:
+
 Each UR robot is calibrated inside the factory giving exact forward and inverse kinematics. To also
 make use of this in ROS, you first have to extract the calibration information from the robot.
 
@@ -81,7 +83,7 @@ For this, there exists a helper script:
 
 .. code:: bash
 
-   $ ros2 launch ur_calibration calibration_correction.py.launch \
+   $ ros2 launch ur_calibration calibration_correction.launch.py \
    robot_ip:=<robot_ip> target_filename:="${HOME}/my_robot_calibration.yaml"
 
 For the parameter ``robot_ip`` insert the IP address on which the ROS pc can reach the robot. As

@@ -68,6 +68,8 @@ def launch_setup(context, *args, **kwargs):
     tool_device_name = LaunchConfiguration("tool_device_name")
     tool_tcp_port = LaunchConfiguration("tool_tcp_port")
     tool_voltage = LaunchConfiguration("tool_voltage")
+    reverse_ip = LaunchConfiguration("reverse_ip")
+    script_command_port = LaunchConfiguration("script_command_port")
 
     joint_limit_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
@@ -82,7 +84,7 @@ def launch_setup(context, *args, **kwargs):
         [FindPackageShare(description_package), "config", ur_type, "visual_parameters.yaml"]
     )
     script_filename = PathJoinSubstitution(
-        [FindPackageShare("ur_robot_driver"), "resources", "ros_control.urscript"]
+        [FindPackageShare("ur_client_library"), "resources", "external_control.urscript"]
     )
     input_recipe_filename = PathJoinSubstitution(
         [FindPackageShare("ur_robot_driver"), "resources", "rtde_input_recipe.txt"]
@@ -171,6 +173,12 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "tool_voltage:=",
             tool_voltage,
+            " ",
+            "reverse_ip:=",
+            reverse_ip,
+            " ",
+            "script_command_port:=",
+            script_command_port,
             " ",
         ]
     )
@@ -532,6 +540,20 @@ def generate_launch_description():
             "tool_voltage",
             default_value="24",
             description="Tool voltage that will be setup.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "reverse_ip",
+            default_value="0.0.0.0",
+            description="IP that will be used for the robot controller to communicate back to the driver.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "script_command_port",
+            default_value="50004",
+            description="Port that will be opened to forward script commands from the driver to the robot",
         )
     )
 
