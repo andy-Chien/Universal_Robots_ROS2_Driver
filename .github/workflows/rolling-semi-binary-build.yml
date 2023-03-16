@@ -1,4 +1,4 @@
-name: Humble Semi-Binary Build
+name: Rolling Semi-Binary Build
 on:
   pull_request:
     branches:
@@ -11,13 +11,13 @@ on:
     - cron: '03 5 * * *'
 
 jobs:
-  humble_semi_binary:
-    name: humble semi-binary build
+  rolling_semi_binary:
+    name: rolling semi-binary build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [humble]
+        ROS_DISTRO: [rolling]
         ROS_REPO: [main, testing]
     env:
       UPSTREAM_WORKSPACE: Universal_Robots_ROS2_Driver.${{ matrix.ROS_DISTRO }}.repos

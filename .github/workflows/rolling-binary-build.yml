@@ -1,4 +1,4 @@
-name: Humble Semi-Binary Build
+name: Rolling Binary Build
 on:
   pull_request:
     branches:
@@ -8,19 +8,19 @@ on:
       - main
   schedule:
     # Run every morning to detect flakiness and broken dependencies
-    - cron: '03 5 * * *'
+    - cron: '13 4 * * *'
 
 jobs:
-  humble_semi_binary:
-    name: humble semi-binary build
+  rolling_binary:
+    name: rolling binary build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [humble]
+        ROS_DISTRO: [rolling]
         ROS_REPO: [main, testing]
     env:
-      UPSTREAM_WORKSPACE: Universal_Robots_ROS2_Driver.${{ matrix.ROS_DISTRO }}.repos
+      UPSTREAM_WORKSPACE: Universal_Robots_ROS2_Driver-not-released.${{ matrix.ROS_DISTRO }}.repos
       NOT_TEST_BUILD: true
       NOT_TEST_DOWNSTREAM: true
     steps:

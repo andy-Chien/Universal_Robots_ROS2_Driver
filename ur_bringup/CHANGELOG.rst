@@ -2,12 +2,6 @@
 Changelog for package ur_bringup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.6 (2022-11-28)
-------------------
-
-2.2.5 (2022-11-19)
-------------------
-
 2.2.4 (2022-10-07)
 ------------------
 * Remove duplicated update_rate parameter (`#479 <https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/issues/479>`_)
