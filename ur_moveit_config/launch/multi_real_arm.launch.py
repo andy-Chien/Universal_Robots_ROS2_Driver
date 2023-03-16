@@ -151,7 +151,9 @@ def launch_setup(context, *args, **kwargs):
                 "pose_xyz": RP[rn]['pose_xyz'],
                 "pose_rpy": RP[rn]['pose_rpy'],
                 "multi_arm": "true",
-                "launch_rviz": "false"
+                "launch_rviz": "false",
+                "use_fake_hardware": "false",
+                "use_fake_controller": "false",
             }.items(),
         )
         object_to_start.append(launch_moveit)

@@ -69,7 +69,7 @@ def launch_setup(context, *args, **kwargs):
     multi_arm = LaunchConfiguration("multi_arm")
 
     joint_limit_params = PathJoinSubstitution(
-        [FindPackageShare(moveit_config_package), "config", ur_type.perform(context) + "_joint_limits.yaml"]
+        [FindPackageShare(description_package), "config", ur_type, "joint_limits.yaml"]
     )
     kinematics_params = PathJoinSubstitution(
         [FindPackageShare(description_package), "config", ur_type, "default_kinematics.yaml"]
@@ -212,7 +212,7 @@ def launch_setup(context, *args, **kwargs):
     multi_arm_text = multi_arm.perform(context)
 
     joint_trajectory_controller_to_spawn = "scaled_joint_trajectory_controller"
-    if use_fake_hardware_text == "true" and multi_arm_text == "true":
+    if multi_arm_text == "true":
         controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
         controllers_yaml["mr_joint_trajectory_controller"]["default"] = True
         joint_trajectory_controller_to_spawn = "mr_joint_trajectory_controller"
@@ -220,8 +220,6 @@ def launch_setup(context, *args, **kwargs):
         controllers_yaml["scaled_joint_trajectory_controller"]["default"] = False
         controllers_yaml["joint_trajectory_controller"]["default"] = True
         joint_trajectory_controller_to_spawn = "joint_trajectory_controller"
-    elif use_fake_hardware_text == "false" and multi_arm_text == "true":
-        pass
 
     if prefix_text != "":
         controllers_yaml["scaled_joint_trajectory_controller"]["joints"] = \
@@ -341,12 +339,12 @@ def launch_setup(context, *args, **kwargs):
 
     # ros2_control using FakeSystem as hardware
     ros2_controllers_path = PathJoinSubstitution(
-        [FindPackageShare("ur_bringup"), "config", "ur_controllers.yaml"]
+        [FindPackageShare("ur_robot_driver"), "config", "ur_controllers.yaml"]
     )
     ns_text = ns.perform(context)
     ros2_controllers_path_text = ros2_controllers_path.perform(context)
     if prefix_text != "":
-        ros2_controllers_yaml = load_yaml("ur_bringup", "config/ur_controllers.yaml")
+        ros2_controllers_yaml = load_yaml("ur_robot_driver", "config/ur_controllers.yaml")
         jtc = 'joint_trajectory_controller'
         rp = 'ros__parameters'
         ros2_controllers_yaml[ns_text] = dict()
@@ -371,12 +369,12 @@ def launch_setup(context, *args, **kwargs):
 
         with open(ros2_controllers_path_text, "r") as file_in:
             file_in_text = file_in.read()
-            file_out = get_package_share_directory("ur_bringup") + \
+            file_out = get_package_share_directory("ur_robot_driver") + \
                 "/config/" + prefix_text + "ur_controllers.yaml"
             with open(file_out, "w") as file_out:
                 file_out.write(file_in_text + yaml.dump(ros2_controllers_yaml))
         ros2_controllers_path = PathJoinSubstitution(
-            [FindPackageShare("ur_bringup"), "config", prefix_text + "ur_controllers.yaml"]
+            [FindPackageShare("ur_robot_driver"), "config", prefix_text + "ur_controllers.yaml"]
         )
 
     ros2_control_node = Node(
@@ -491,7 +489,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "description_package",
-            default_value="ur_description",
+            default_value="mr_description",
             description="Description package with robot URDF/XACRO files. Usually the argument \
         is not set, it enables use of a custom description.",
         )
